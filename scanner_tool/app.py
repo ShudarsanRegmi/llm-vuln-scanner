@@ -1,36 +1,42 @@
 # scanner_tool/app.py
-import streamlit as st
+from flask import Flask, render_template, request, jsonify
 import requests
 import os
 
-st.title("🛡️ LLM Vulnerability Scanner")
+app = Flask(__name__)
 
+# Load payloads
 payload_file = os.path.join(os.path.dirname(__file__), "payloads.txt")
 with open(payload_file) as f:
     payloads = [line.strip() for line in f if line.strip()]
 
-chatbot_endpoint = st.text_input("Chatbot API Endpoint", "http://localhost:8000/generate")
-classifier_endpoint = st.text_input("Classifier API Endpoint", "http://localhost:9000/classify")
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    chatbot_endpoint = request.form.get('chatbot_endpoint', 'http://localhost:8000/generate')
+    classifier_endpoint = request.form.get('classifier_endpoint', 'http://localhost:9000/classify')
+    selected_payload = request.form.get('payload', payloads[0])
+    result = None
+    llm_response = None
+    severity = None
+    error = None
+    if request.method == 'POST':
+        try:
+            res = requests.post(chatbot_endpoint, json={"prompt": selected_payload}, timeout=30)
+            llm_response = res.json().get("response", "(No response)")
+            classify_res = requests.post(classifier_endpoint, json={"response": llm_response}, timeout=30)
+            severity = classify_res.json().get("level", None)
+            result = 'Potential Vulnerability Detected!' if severity is not None and severity >= 2 else 'Response looks safe.'
+        except Exception as e:
+            error = str(e)
+    return render_template('scanner.html',
+                           payloads=payloads,
+                           selected_payload=selected_payload,
+                           chatbot_endpoint=chatbot_endpoint,
+                           classifier_endpoint=classifier_endpoint,
+                           llm_response=llm_response,
+                           severity=severity,
+                           result=result,
+                           error=error)
 
-payload = st.selectbox("Select a payload", payloads)
-
-if st.button("Scan"):
-    try:
-        res = requests.post(chatbot_endpoint, json={"prompt": payload})
-        llm_response = res.json()["response"]
-
-        classify_res = requests.post(classifier_endpoint, json={"response": llm_response})
-        level = classify_res.json()["level"]
-
-        st.subheader("🤖 LLM Response")
-        st.code(llm_response)
-
-        st.subheader("📊 Classification Result")
-        st.success(f"Severity Level: {level}")
-
-        if level >= 2:
-            st.error("⚠️ Potential Vulnerability Detected!")
-        else:
-            st.info("✅ Response looks safe.")
-    except Exception as e:
-        st.error(f"Error: {e}")
+if __name__ == "__main__":
+    app.run(port=8503, debug=True)

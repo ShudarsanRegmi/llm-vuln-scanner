@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ LLM Vulnerability Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="https://img.icons8.com/ios-filled/50/shield.png">
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-xl bg-white rounded-2xl shadow-lg p-8">
+        <div class="flex items-center mb-6">
+            <img src="https://img.icons8.com/ios-filled/50/shield.png" class="w-10 h-10 mr-3" alt="shield">
+            <h1 class="text-2xl font-bold text-gray-800">LLM Vulnerability Scanner</h1>
+        </div>
+        <form method="POST" class="space-y-4">
+            <div>
+                <label class="block text-gray-700 font-semibold mb-1">Chatbot API Endpoint</label>
+                <input type="text" name="chatbot_endpoint" value="{{ chatbot_endpoint }}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-1">Classifier API Endpoint</label>
+                <input type="text" name="classifier_endpoint" value="{{ classifier_endpoint }}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+            </div>
+            <div>
+                <label class="block text-gray-700 font-semibold mb-1">Select a Payload</label>
+                <select name="payload" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    {% for p in payloads %}
+                        <option value="{{ p }}" {% if p == selected_payload %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">Scan</button>
+        </form>
+
+        {% if error %}
+        <div class="mt-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"/></svg>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        {% if llm_response %}
+        <div class="mt-8">
+            <div class="mb-2 text-lg font-semibold text-gray-700 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0H3"/></svg>
+                LLM Response
+            </div>
+            <pre class="bg-gray-100 rounded-lg p-4 text-gray-800 overflow-x-auto">{{ llm_response }}</pre>
+        </div>
+        {% endif %}
+
+        {% if severity is not none %}
+        <div class="mt-6">
+            <div class="mb-2 text-lg font-semibold text-gray-700 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                Classification Result
+            </div>
+            <div class="flex items-center space-x-3">
+                <span class="inline-block px-3 py-1 rounded-full text-white font-bold {{ 'bg-red-600' if severity >= 2 else 'bg-green-600' }}">
+                    Severity Level: {{ severity }}
+                </span>
+                {% if severity >= 2 %}
+                    <span class="text-red-600 font-semibold flex items-center"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"/></svg>Potential Vulnerability Detected!</span>
+                {% else %}
+                    <span class="text-green-600 font-semibold flex items-center"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Response looks safe.</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html> 
