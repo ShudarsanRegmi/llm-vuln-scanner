@@ -12,15 +12,15 @@ echo "Starting fake_classifier_api on port 9000..."
 uvicorn fake_classifier_api.main:app --reload --port 9000 > fake_classifier_api.log 2>&1 &
 FAKE_CLASSIFIER_PID=$!
 
-# Start scanner_tool Streamlit app
+# Start scanner_tool Flask app
 sleep 2
-echo "Starting scanner_tool Streamlit app..."
-streamlit run scanner_tool/app.py > scanner_tool.log 2>&1 &
+echo "Starting scanner_tool Flask app on port 8503..."
+python3 scanner_tool/app.py > scanner_tool.log 2>&1 &
 SCANNER_TOOL_PID=$!
 
 # Start chatbot_ui Flask app
 sleep 2
-echo "Starting chatbot_ui Flask app on port 8501..."
+echo "Starting chatbot_ui Flask app on port 8502..."
 python3 chatbot_ui/app.py > chatbot_ui.log 2>&1 &
 CHATBOT_UI_PID=$!
 
