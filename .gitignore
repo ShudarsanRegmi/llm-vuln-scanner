@@ -84,3 +84,16 @@ __pycache__/         # Directory for Python bytecode cache
 *$py.class           # Jython compiled files (rare)
 
 
+*.zip
+
+# Model files - these are large and shouldn't be in git
+model/
+*.safetensors
+*.bin
+*.onnx
+*.pt
+*.pth
+*.pkl
+*.joblib
+*.h5
+*.hdf5
