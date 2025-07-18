@@ -6,11 +6,11 @@ export LLM_BACKEND=llama
 uvicorn chatbot_api.main:app --reload --port 8000 > chatbot_api.log 2>&1 &
 CHATBOT_API_PID=$!
 
-# Start fake_classifier_api
+# Start roberta_classifier_api (replace fake_classifier_api)
 sleep 2
-echo "Starting fake_classifier_api on port 9000..."
-uvicorn fake_classifier_api.main:app --reload --port 9000 > fake_classifier_api.log 2>&1 &
-FAKE_CLASSIFIER_PID=$!
+echo "Starting roberta_classifier_api on port 9000..."
+uvicorn roberta_classifier_api.main:app --reload --port 9000 > roberta_classifier_api.log 2>&1 &
+ROBERTA_CLASSIFIER_PID=$!
 
 # Start scanner_tool Flask app
 sleep 2
@@ -28,8 +28,8 @@ CHATBOT_UI_PID=$!
 echo "---"
 echo "All services started."
 echo "chatbot_api PID: $CHATBOT_API_PID (log: chatbot_api.log)"
-echo "fake_classifier_api PID: $FAKE_CLASSIFIER_PID (log: fake_classifier_api.log)"
+echo "roberta_classifier_api PID: $ROBERTA_CLASSIFIER_PID (log: roberta_classifier_api.log)"
 echo "scanner_tool PID: $SCANNER_TOOL_PID (log: scanner_tool.log)"
 echo "chatbot_ui PID: $CHATBOT_UI_PID (log: chatbot_ui.log)"
 echo "---"
-echo "To stop all, run: kill $CHATBOT_API_PID $FAKE_CLASSIFIER_PID $SCANNER_TOOL_PID $CHATBOT_UI_PID" 
+echo "To stop all, run: kill $CHATBOT_API_PID $ROBERTA_CLASSIFIER_PID $SCANNER_TOOL_PID $CHATBOT_UI_PID"

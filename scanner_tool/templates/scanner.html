@@ -1,127 +1,191 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en">    
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🛡️ LLM Vulnerability Scanner</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="icon" href="https://img.icons8.com/ios-filled/50/shield.png">
 </head>
 <body class="bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
+    <div class="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-8">
         <div class="flex items-center mb-6">
             <img src="https://img.icons8.com/ios-filled/50/shield.png" class="w-10 h-10 mr-3" alt="shield">
             <h1 class="text-2xl font-bold text-gray-800">LLM Vulnerability Scanner</h1>
         </div>
-        <form method="POST" class="space-y-4">
-            <div>
-                <label class="block text-gray-700 font-semibold mb-1">Chatbot API Endpoint</label>
-                <input type="text" name="chatbot_endpoint" value="{{ chatbot_endpoint }}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
-            </div>
-            <div>
-                <label class="block text-gray-700 font-semibold mb-1">Classifier API Endpoint</label>
-                <input type="text" name="classifier_endpoint" value="{{ classifier_endpoint }}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
-            </div>
-            <div class="flex items-center space-x-4">
-                <div class="flex-1">
-                    <label class="block text-gray-700 font-semibold mb-1">Select a Payload</label>
-                    <select name="payload" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        {% for p in payloads %}
-                            <option value="{{ p }}" {% if p == selected_payload %}selected{% endif %}>{{ p }}</option>
-                        {% endfor %}
-                    </select>
+        <!-- Tabs -->
+        <div class="mb-6 border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" id="tabs" role="tablist">
+                <button class="tab-link py-2 px-4 text-gray-600 border-b-2 font-medium focus:outline-none" id="scan-tab" data-tab="scan">Scan</button>
+                <button class="tab-link py-2 px-4 text-gray-600 border-b-2 font-medium focus:outline-none" id="report-tab" data-tab="report">Report</button>
+                <button class="tab-link py-2 px-4 text-gray-600 border-b-2 font-medium focus:outline-none" id="about-tab" data-tab="about">About</button>
+            </nav>
+        </div>
+        <!-- Tab Contents -->
+        <div id="tab-contents">
+            <!-- Scan Tab -->
+            <div id="scan" class="tab-content">
+                <form method="POST" class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-1">Chatbot API Endpoint</label>
+                        <input type="text" name="chatbot_endpoint" value="{{ chatbot_endpoint }}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-semibold mb-1">Classifier API Endpoint</label>
+                        <input type="text" name="classifier_endpoint" value="{{ classifier_endpoint }}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400" required>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex-1">
+                            <label class="block text-gray-700 font-semibold mb-1">Select a Payload</label>
+                            <select name="payload" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                {% for p in payloads %}
+                                    <option value="{{ p }}" {% if p == selected_payload %}selected{% endif %}>{{ p }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="flex items-center mt-6">
+                            <input type="checkbox" id="scan_all" name="scan_all" class="mr-2" {% if report %}checked{% endif %}>
+                            <label for="scan_all" class="text-gray-700 font-semibold">Scan all</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">Scan</button>
+                </form>
+                {% if error %}
+                <div class="mt-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg flex items-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"/></svg>
+                    <span>{{ error }}</span>
                 </div>
-                <div class="flex items-center mt-6">
-                    <input type="checkbox" id="scan_all" name="scan_all" class="mr-2" {% if report %}checked{% endif %}>
-                    <label for="scan_all" class="text-gray-700 font-semibold">Scan all</label>
+                {% endif %}
+                {% if llm_response and not report %}
+                <div class="mt-8">
+                    <div class="mb-2 text-lg font-semibold text-gray-700 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0H3"/></svg>
+                        LLM Response
+                    </div>
+                    <pre class="bg-gray-100 rounded-lg p-4 text-gray-800 overflow-x-auto">{{ llm_response }}</pre>
                 </div>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition">Scan</button>
-        </form>
-
-        {% if error %}
-        <div class="mt-6 p-4 bg-red-100 border border-red-300 text-red-700 rounded-lg flex items-center">
-            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"/></svg>
-            <span>{{ error }}</span>
-        </div>
-        {% endif %}
-
-        {% if report %}
-        <div class="mt-8">
-            <div class="mb-2 text-lg font-semibold text-gray-700 flex items-center">
-                <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0H3"/></svg>
-                Scan Report
-            </div>
-            <div class="mb-4 flex items-center space-x-4">
-                <span class="inline-block px-3 py-1 rounded-full text-white font-bold {{ 'bg-red-600' if report.flag == 'Potentially Vulnerable' else 'bg-green-600' }}">
-                    {{ report.flag }}
-                </span>
-                <span class="text-gray-700">Severity counts:</span>
-                <span class="bg-gray-200 rounded px-2 py-1 text-sm">Level 0: {{ report.severity_counts[0] }}</span>
-                <span class="bg-gray-200 rounded px-2 py-1 text-sm">Level 1: {{ report.severity_counts[1] }}</span>
-                <span class="bg-yellow-200 rounded px-2 py-1 text-sm">Level 2: {{ report.severity_counts[2] }}</span>
-                <span class="bg-red-200 rounded px-2 py-1 text-sm">Level 3: {{ report.severity_counts[3] }}</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                        <tr class="bg-gray-100 text-gray-700">
-                            <th class="py-2 px-4 border-b">Payload</th>
-                            <th class="py-2 px-4 border-b">LLM Response</th>
-                            <th class="py-2 px-4 border-b">Severity</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for d in report.details %}
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="py-2 px-4 align-top text-sm">{{ d.payload }}</td>
-                            <td class="py-2 px-4 align-top text-xs bg-gray-50 max-w-xs overflow-x-auto">{{ d.llm_response }}</td>
-                            <td class="py-2 px-4 align-top">
-                                <span class="inline-block px-2 py-1 rounded-full text-xs font-bold
-                                    {% if d.severity == 0 %}bg-green-500 text-white
-                                    {% elif d.severity == 1 %}bg-yellow-400 text-gray-900
-                                    {% elif d.severity == 2 %}bg-orange-500 text-white
-                                    {% elif d.severity == 3 %}bg-red-600 text-white
-                                    {% else %}bg-gray-300 text-gray-700{% endif %}">
-                                    {{ d.severity if d.severity is not none else '?' }}
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        {% endif %}
-
-        {% if llm_response and not report %}
-        <div class="mt-8">
-            <div class="mb-2 text-lg font-semibold text-gray-700 flex items-center">
-                <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m0 0H3"/></svg>
-                LLM Response
-            </div>
-            <pre class="bg-gray-100 rounded-lg p-4 text-gray-800 overflow-x-auto">{{ llm_response }}</pre>
-        </div>
-        {% endif %}
-
-        {% if severity is not none and not report %}
-        <div class="mt-6">
-            <div class="mb-2 text-lg font-semibold text-gray-700 flex items-center">
-                <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                Classification Result
-            </div>
-            <div class="flex items-center space-x-3">
-                <span class="inline-block px-3 py-1 rounded-full text-white font-bold {{ 'bg-red-600' if severity >= 2 else 'bg-green-600' }}">
-                    Severity Level: {{ severity }}
-                </span>
-                {% if severity >= 2 %}
-                    <span class="text-red-600 font-semibold flex items-center"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"/></svg>Potential Vulnerability Detected!</span>
-                {% else %}
-                    <span class="text-green-600 font-semibold flex items-center"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Response looks safe.</span>
+                {% endif %}
+                {% if severity is not none and not report %}
+                <div class="mt-6">
+                    <div class="mb-2 text-lg font-semibold text-gray-700 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        Classification Result
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="inline-block px-3 py-1 rounded-full text-white font-bold {{ 'bg-red-600' if severity >= 2 else 'bg-green-600' }}">
+                            Severity Level: {{ severity }}
+                        </span>
+                        {% if severity >= 2 %}
+                            <span class="text-red-600 font-semibold flex items-center"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12A9 9 0 1 1 3 12a9 9 0 0 1 18 0Z"/></svg>Potential Vulnerability Detected!</span>
+                        {% else %}
+                            <span class="text-green-600 font-semibold flex items-center"><svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>Response looks safe.</span>
+                        {% endif %}
+                    </div>
+                </div>
                 {% endif %}
             </div>
+            <!-- Report Tab -->
+            <div id="report" class="tab-content hidden">
+                {% if report %}
+                <div class="mb-4 flex items-center space-x-4">
+                    <span class="inline-block px-3 py-1 rounded-full text-white font-bold {{ 'bg-red-600' if report.flag == 'Potentially Vulnerable' else 'bg-green-600' }}">
+                        {{ report.flag }}
+                    </span>
+                    <span class="text-gray-700">Severity counts:</span>
+                    <span class="bg-gray-200 rounded px-2 py-1 text-sm">Level 0: {{ report.severity_counts[0] }}</span>
+                    <span class="bg-gray-200 rounded px-2 py-1 text-sm">Level 1: {{ report.severity_counts[1] }}</span>
+                    <span class="bg-yellow-200 rounded px-2 py-1 text-sm">Level 2: {{ report.severity_counts[2] }}</span>
+                    <span class="bg-red-200 rounded px-2 py-1 text-sm">Level 3: {{ report.severity_counts[3] }}</span>
+                </div>
+                <div class="mb-8">
+                    <canvas id="severityChart" height="120"></canvas>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-700">
+                                <th class="py-2 px-4 border-b">Payload</th>
+                                <th class="py-2 px-4 border-b">LLM Response</th>
+                                <th class="py-2 px-4 border-b">Severity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for d in report.details %}
+                            <tr class="border-b hover:bg-gray-50">
+                                <td class="py-2 px-4 align-top text-sm">{{ d.payload }}</td>
+                                <td class="py-2 px-4 align-top text-xs bg-gray-50 max-w-xs overflow-x-auto">{{ d.llm_response }}</td>
+                                <td class="py-2 px-4 align-top">
+                                    <span class="inline-block px-2 py-1 rounded-full text-xs font-bold
+                                        {% if d.severity == 0 %}bg-green-500 text-white
+                                        {% elif d.severity == 1 %}bg-yellow-400 text-gray-900
+                                        {% elif d.severity == 2 %}bg-orange-500 text-white
+                                        {% elif d.severity == 3 %}bg-red-600 text-white
+                                        {% else %}bg-gray-300 text-gray-700{% endif %}">
+                                        {{ d.severity if d.severity is not none else '?' }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-gray-500 text-center py-8">No report available. Run a scan to see results.</div>
+                {% endif %}
+            </div>
+            <!-- About Tab -->
+            <div id="about" class="tab-content hidden">
+                <div class="p-4 text-gray-700">
+                    <h5 class="font-bold mb-2">About the Vulnerability Scanner</h5>
+                    <p>This tool scans LLM responses for potential vulnerabilities using a set of crafted payloads and a classifier. It provides a severity breakdown and a professional report to help you assess chatbot safety.</p>
+                    <p class="mt-2 text-xs text-gray-500">UI by <b>Tailwind, Chart.js</b></p>
+                </div>
+            </div>
         </div>
-        {% endif %}
     </div>
+    <script>
+        // Tab logic
+        const tabLinks = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+        function showTab(tabId) {
+            tabContents.forEach(tc => tc.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            tabLinks.forEach(tl => tl.classList.remove('border-blue-600', 'text-blue-600', 'bg-gray-100'));
+            document.getElementById(tabId+'-tab').classList.add('border-blue-600', 'text-blue-600', 'bg-gray-100');
+        }
+        tabLinks.forEach(link => {
+            link.addEventListener('click', () => showTab(link.dataset.tab));
+        });
+        // Default tab
+        showTab('scan');
+
+        // Chart.js for severity report
+        {% if report %}
+        const ctx = document.getElementById('severityChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ chart_labels|tojson }},
+                datasets: [{
+                    label: 'Payloads per Severity',
+                    data: {{ chart_data|tojson }},
+                    backgroundColor: [
+                        '#22c55e', // green
+                        '#fde047', // yellow
+                        '#f97316', // orange
+                        '#ef4444'  // red
+                    ],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Count' } } }
+            }
+        });
+        {% endif %}
+    </script>
 </body>
 </html> 

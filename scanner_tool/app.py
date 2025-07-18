@@ -1,16 +1,16 @@
 # scanner_tool/app.py
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Blueprint
 import requests
 import os
 
-app = Flask(__name__)
+scanner_bp = Blueprint('scanner', __name__)
 
 # Load payloads
 payload_file = os.path.join(os.path.dirname(__file__), "payloads.txt")
 with open(payload_file) as f:
     payloads = [line.strip() for line in f if line.strip()]
 
-@app.route('/', methods=['GET', 'POST'])
+@scanner_bp.route('/', methods=['GET', 'POST'])
 def index():
     chatbot_endpoint = request.form.get('chatbot_endpoint', 'http://localhost:8000/generate')
     classifier_endpoint = request.form.get('classifier_endpoint', 'http://localhost:9000/classify')
@@ -55,6 +55,9 @@ def index():
                 result = 'Potential Vulnerability Detected!' if severity is not None and severity >= 2 else 'Response looks safe.'
         except Exception as e:
             error = str(e)
+    # Prepare chart data for the report tab
+    chart_labels = [f"Level {i}" for i in range(4)]
+    chart_data = [report['severity_counts'][i] if report else 0 for i in range(4)]
     return render_template('scanner.html',
                            payloads=payloads,
                            selected_payload=selected_payload,
@@ -64,7 +67,14 @@ def index():
                            severity=severity,
                            result=result,
                            error=error,
-                           report=report)
+                           report=report,
+                           chart_labels=chart_labels,
+                           chart_data=chart_data)
+
+# Main app
+from flask import Flask
+app = Flask(__name__)
+app.register_blueprint(scanner_bp, url_prefix="/")
 
 if __name__ == "__main__":
     app.run(port=8503, debug=True)
