@@ -5,62 +5,210 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>☕ BrewBot - Coffee Shop Chatbot</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #f8f5f2; }
-        .chat-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); padding: 0; }
-        .chat-header { background: #6f4e37; color: #fff; padding: 20px; border-radius: 16px 16px 0 0; text-align: center; font-size: 1.5rem; font-weight: bold; }
-        .chat-body { padding: 20px; height: 400px; overflow-y: auto; }
-        .chat-message { margin-bottom: 16px; display: flex; }
-        .chat-message.user .msg { margin-left: auto; background: #e3caa5; color: #6f4e37; }
-        .chat-message.bot .msg { margin-right: auto; background: #6f4e37; color: #fff; }
-        .msg { padding: 12px 18px; border-radius: 18px; max-width: 75%; font-size: 1rem; }
-        .chat-footer { padding: 16px 20px; border-top: 1px solid #eee; background: #f8f5f2; border-radius: 0 0 16px 16px; }
-        .form-control { border-radius: 20px; }
-        .btn-coffee { background: #6f4e37; color: #fff; border-radius: 20px; }
-        .btn-coffee:hover { background: #563826; }
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100vh;
+            min-width: 100vw;
+            height: 100vh;
+            width: 100vw;
+            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ef 100%);
+            overflow: hidden;
+        }
+        .chat-container {
+            width: 80vw;
+            max-width: 900px;
+            height: 100vh;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-header {
+            background: #6f4e37;
+            color: #fff;
+            padding: 24px 24px 18px 24px;
+            border-radius: 18px 18px 0 0;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .chat-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: #f9f7f4;
+        }
+        .chat-message {
+            margin-bottom: 18px;
+            display: flex;
+            align-items: flex-end;
+        }
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+        .chat-message .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: #eee;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            margin: 0 10px;
+        }
+        .chat-message.user .msg {
+            background: #e3caa5;
+            color: #6f4e37;
+            margin-right: 10px;
+        }
+        .chat-message.bot .msg {
+            background: #6f4e37;
+            color: #fff;
+            margin-left: 10px;
+        }
+        .msg {
+            padding: 14px 20px;
+            border-radius: 18px;
+            max-width: 75vw;
+            font-size: 1.08rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            word-break: break-word;
+        }
+        .chat-footer {
+            padding: 18px 24px;
+            border-top: 1px solid #eee;
+            background: #f8f5f2;
+            border-radius: 0 0 18px 18px;
+        }
+        .form-control {
+            border-radius: 20px;
+            font-size: 1.1rem;
+        }
+        .btn-coffee {
+            background: #6f4e37;
+            color: #fff;
+            border-radius: 20px;
+            font-size: 1.1rem;
+        }
+        .btn-coffee:hover {
+            background: #563826;
+        }
+        .markdown-body {
+            font-size: 1.08rem;
+        }
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 4px solid #e3caa5;
+            border-top: 4px solid #6f4e37;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 10px;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @media (max-width: 900px) {
+            .chat-container {
+                width: 100vw;
+                max-width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+                margin: 0;
+            }
+            .chat-header, .chat-footer {
+                padding-left: 10px;
+                padding-right: 10px;
+                border-radius: 0;
+            }
+            .chat-body {
+                padding: 10px;
+            }
+            .msg {
+                max-width: 90vw;
+            }
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="chat-container">
-        <div class="chat-header">☕ BrewBot - Coffee Shop Chatbot</div>
+        <div class="chat-header"><i class="fa-solid fa-mug-hot me-2"></i>BrewBot - Coffee Shop Chatbot</div>
         <div class="chat-body" id="chat-body">
             <!-- Messages will appear here -->
         </div>
         <div class="chat-footer">
-            <form id="chat-form" autocomplete="off">
-                <div class="input-group">
-                    <input type="text" class="form-control" id="user-input" placeholder="Ask BrewBot anything..." required autofocus>
-                    <button class="btn btn-coffee" type="submit">Send</button>
-                </div>
+            <form id="chat-form" autocomplete="off" class="d-flex gap-2">
+                <input type="text" class="form-control flex-grow-1" id="user-input" placeholder="Ask BrewBot anything..." required autofocus>
+                <button class="btn btn-coffee px-4" type="submit"><i class="fa-solid fa-paper-plane"></i></button>
             </form>
         </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        let chatBody = $('#chat-body');
-        function appendMessage(sender, text) {
+        let chatBody = document.getElementById('chat-body');
+        let loadingSpinner = null;
+        function appendMessage(sender, text, isMarkdown=false) {
             let msgClass = sender === 'user' ? 'user' : 'bot';
-            let msgHtml = `<div class="chat-message ${msgClass}"><div class="msg">${text}</div></div>`;
-            chatBody.append(msgHtml);
-            chatBody.scrollTop(chatBody[0].scrollHeight);
+            let avatar = sender === 'user' ? '<div class="avatar bg-secondary text-white"><i class="fa-solid fa-user"></i></div>' : '<div class="avatar bg-coffee text-white"><i class="fa-solid fa-robot"></i></div>';
+            let msgHtml = `<div class="chat-message ${msgClass}">`;
+            if (sender === 'user') msgHtml += avatar;
+            msgHtml += `<div class="msg">`;
+            if (isMarkdown) {
+                msgHtml += `<div class="markdown-body">${marked.parse(text)}</div>`;
+            } else {
+                msgHtml += text;
+            }
+            msgHtml += `</div>`;
+            if (sender === 'bot') msgHtml += avatar;
+            msgHtml += `</div>`;
+            chatBody.insertAdjacentHTML('beforeend', msgHtml);
+            chatBody.scrollTop = chatBody.scrollHeight;
         }
-        $('#chat-form').on('submit', function(e) {
+        function showLoading() {
+            if (!loadingSpinner) {
+                loadingSpinner = document.createElement('div');
+                loadingSpinner.className = 'chat-message bot';
+                loadingSpinner.innerHTML = '<div class="spinner"></div>';
+                chatBody.appendChild(loadingSpinner);
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        }
+        function hideLoading() {
+            if (loadingSpinner) {
+                chatBody.removeChild(loadingSpinner);
+                loadingSpinner = null;
+            }
+        }
+        document.getElementById('chat-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            let userInput = $('#user-input').val().trim();
+            let userInput = document.getElementById('user-input').value.trim();
             if (!userInput) return;
             appendMessage('user', userInput);
-            $('#user-input').val('');
-            $.ajax({
-                url: '/chat',
+            document.getElementById('user-input').value = '';
+            showLoading();
+            fetch('/chat', {
                 method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ prompt: userInput }),
-                success: function(data) {
-                    appendMessage('bot', data.response);
-                },
-                error: function(xhr) {
-                    appendMessage('bot', 'Sorry, there was an error.');
-                }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: userInput })
+            })
+            .then(res => res.json())
+            .then(data => {
+                hideLoading();
+                appendMessage('bot', data.response, true);
+            })
+            .catch(() => {
+                hideLoading();
+                appendMessage('bot', 'Sorry, there was an error.', false);
             });
         });
     </script>
