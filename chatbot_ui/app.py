@@ -1,85 +1,14 @@
 # chatbot_ui/app.py
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template, request, jsonify
 import requests
 
 app = Flask(__name__)
 
 API_URL = "http://localhost:8000/generate"
 
-HTML = '''
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>☕ BrewBot - Coffee Shop Chatbot</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f5f2; }
-        .chat-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.08); padding: 0; }
-        .chat-header { background: #6f4e37; color: #fff; padding: 20px; border-radius: 16px 16px 0 0; text-align: center; font-size: 1.5rem; font-weight: bold; }
-        .chat-body { padding: 20px; height: 400px; overflow-y: auto; }
-        .chat-message { margin-bottom: 16px; display: flex; }
-        .chat-message.user .msg { margin-left: auto; background: #e3caa5; color: #6f4e37; }
-        .chat-message.bot .msg { margin-right: auto; background: #6f4e37; color: #fff; }
-        .msg { padding: 12px 18px; border-radius: 18px; max-width: 75%; font-size: 1rem; }
-        .chat-footer { padding: 16px 20px; border-top: 1px solid #eee; background: #f8f5f2; border-radius: 0 0 16px 16px; }
-        .form-control { border-radius: 20px; }
-        .btn-coffee { background: #6f4e37; color: #fff; border-radius: 20px; }
-        .btn-coffee:hover { background: #563826; }
-    </style>
-</head>
-<body>
-    <div class="chat-container">
-        <div class="chat-header">☕ BrewBot - Coffee Shop Chatbot</div>
-        <div class="chat-body" id="chat-body">
-            <!-- Messages will appear here -->
-        </div>
-        <div class="chat-footer">
-            <form id="chat-form" autocomplete="off">
-                <div class="input-group">
-                    <input type="text" class="form-control" id="user-input" placeholder="Ask BrewBot anything..." required autofocus>
-                    <button class="btn btn-coffee" type="submit">Send</button>
-                </div>
-            </form>
-        </div>
-    </div>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        let chatBody = $('#chat-body');
-        function appendMessage(sender, text) {
-            let msgClass = sender === 'user' ? 'user' : 'bot';
-            let msgHtml = `<div class="chat-message ${msgClass}"><div class="msg">${text}</div></div>`;
-            chatBody.append(msgHtml);
-            chatBody.scrollTop(chatBody[0].scrollHeight);
-        }
-        $('#chat-form').on('submit', function(e) {
-            e.preventDefault();
-            let userInput = $('#user-input').val().trim();
-            if (!userInput) return;
-            appendMessage('user', userInput);
-            $('#user-input').val('');
-            $.ajax({
-                url: '/chat',
-                method: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify({ prompt: userInput }),
-                success: function(data) {
-                    appendMessage('bot', data.response);
-                },
-                error: function(xhr) {
-                    appendMessage('bot', 'Sorry, there was an error.');
-                }
-            });
-        });
-    </script>
-</body>
-</html>
-'''
-
 @app.route("/", methods=["GET"])
 def index():
-    return render_template_string(HTML)
+    return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
 def chat():
