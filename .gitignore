@@ -53,7 +53,7 @@ pyrightconfig.json
 
 # Local environment variables
 .env
-.env.*
+.env
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/

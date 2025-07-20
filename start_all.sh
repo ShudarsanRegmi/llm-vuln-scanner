@@ -3,13 +3,13 @@
 # Start chatbot_api (LLM backend)
 echo "Starting chatbot_api (LLM backend) on port 8000..."
 export LLM_BACKEND=llama
-uvicorn chatbot_api.main:app --reload --port 8000 > chatbot_api.log 2>&1 &
+python3 -m uvicorn chatbot_api.main:app --reload --port 8000 > chatbot_api.log 2>&1 &
 CHATBOT_API_PID=$!
 
 # Start roberta_classifier_api (replace fake_classifier_api)
 sleep 2
 echo "Starting roberta_classifier_api on port 9000..."
-uvicorn roberta_classifier_api.main:app --reload --port 9000 > roberta_classifier_api.log 2>&1 &
+python3 -m uvicorn roberta_classifier_api.main:app --reload --port 9000 > roberta_classifier_api.log 2>&1 &
 ROBERTA_CLASSIFIER_PID=$!
 
 # Start scanner_tool Flask app
