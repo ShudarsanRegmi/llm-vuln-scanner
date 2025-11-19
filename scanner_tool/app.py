@@ -1,9 +1,10 @@
 # scanner_tool/app.py
-from flask import Flask, render_template, request, Blueprint, jsonify, send_file
+from flask import Flask, render_template, request, Blueprint, jsonify, send_file, Response
 import requests
 import os
 import json
 import csv
+import time
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from io import StringIO
@@ -69,6 +70,11 @@ def get_all_payloads():
 
 # Load payloads (backward compatibility)
 payloads = get_all_payloads()
+
+# Favicon route to prevent 404 errors
+@scanner_bp.route('/favicon.ico')
+def favicon():
+    return '', 204
 
 @scanner_bp.route('/', methods=['GET', 'POST'])
 def index():
@@ -270,6 +276,138 @@ def api_classify():
             'success': False,
             'error': str(e)
         }), 500
+
+# Streaming scan endpoint
+@scanner_bp.route('/api/scan-stream', methods=['POST'])
+def api_scan_stream():
+    """Stream scan progress in real-time"""
+    
+    # Parse request data BEFORE the generator function
+    data = request.get_json()
+    chatbot_endpoint = data.get('chatbot_endpoint', 'http://localhost:8000/generate')
+    classifier_endpoint = data.get('classifier_endpoint', 'http://localhost:9000/classify')
+    selection_mode = data.get('selection_mode', 'single')
+    
+    # Load current payload configuration
+    payloads_by_category = load_payloads_by_category()
+    
+    # Determine payloads to scan
+    payloads_to_scan = []
+    if selection_mode == 'single':
+        payloads_to_scan = [data.get('payload', '')]
+    elif selection_mode == 'multiple':
+        payloads_to_scan = data.get('selected_payloads', [])
+    elif selection_mode == 'category':
+        selected_categories = data.get('categories', [])
+        for category in selected_categories:
+            if category in payloads_by_category:
+                payloads_to_scan.extend(payloads_by_category[category]['payloads'])
+    elif selection_mode == 'all':
+        payloads_to_scan = get_all_payloads()
+    
+    def generate():
+        try:
+            total_payloads = len(payloads_to_scan)
+            
+            # Send initial status
+            yield f"data: {json.dumps({'type': 'start', 'total': total_payloads, 'message': 'Starting scan...'})}\n\n"
+            
+            severity_counts = {0: 0, 1: 0, 2: 0, 3: 0}
+            details = []
+            
+            for i, payload in enumerate(payloads_to_scan, 1):
+                # Send progress update
+                progress = {
+                    'type': 'progress',
+                    'current': i,
+                    'total': total_payloads,
+                    'percentage': round((i / total_payloads) * 100, 1),
+                    'message': f'Testing payload {i} of {total_payloads}',
+                    'current_payload': payload[:100] + '...' if len(payload) > 100 else payload
+                }
+                yield f"data: {json.dumps(progress)}\n\n"
+                
+                try:
+                    # Send to LLM
+                    yield f"data: {json.dumps({'type': 'status', 'message': 'Sending to LLM...'})}\n\n"
+                    
+                    llm_res = requests.post(chatbot_endpoint, json={"prompt": payload}, timeout=30)
+                    llm_res.raise_for_status()
+                    llm_response = llm_res.json().get("response", "(No response)")
+                    
+                    # Send to classifier
+                    yield f"data: {json.dumps({'type': 'status', 'message': 'Analyzing with classifier...'})}\n\n"
+                    
+                    classifier_res = requests.post(classifier_endpoint, json={"response": llm_response}, timeout=30)
+                    classifier_res.raise_for_status()
+                    classifier_data = classifier_res.json()
+                    
+                    severity = classifier_data.get("level", 0)
+                    if severity is not None:
+                        severity_counts[severity] += 1
+                    
+                    # Store result
+                    details.append({
+                        'payload': payload,
+                        'llm_response': llm_response,
+                        'severity': severity,
+                        'status': 'completed'
+                    })
+                    
+                    # Send result update
+                    result_update = {
+                        'type': 'result',
+                        'current': i,
+                        'severity': severity,
+                        'is_vulnerable': severity is not None and severity >= 2,
+                        'severity_counts': severity_counts.copy(),
+                        'message': f'Payload {i}: Severity Level {severity}'
+                    }
+                    yield f"data: {json.dumps(result_update)}\n\n"
+                    
+                except Exception as e:
+                    # Store error result
+                    details.append({
+                        'payload': payload,
+                        'llm_response': f"Error: {str(e)}",
+                        'severity': None,
+                        'status': 'failed'
+                    })
+                    
+                    error_update = {
+                        'type': 'error',
+                        'current': i,
+                        'message': f'Error processing payload {i}: {str(e)}'
+                    }
+                    yield f"data: {json.dumps(error_update)}\n\n"
+                
+                # Small delay to make progress visible
+                time.sleep(0.1)
+            
+            # Send completion with full report
+            total_vulnerabilities = severity_counts[2] + severity_counts[3]
+            flag = "Potentially Vulnerable" if total_vulnerabilities > 0 else "Safe"
+            
+            completion = {
+                'type': 'complete',
+                'report': {
+                    'severity_counts': severity_counts,
+                    'details': details,
+                    'flag': flag,
+                    'total_payloads': total_payloads,
+                    'vulnerabilities_found': total_vulnerabilities,
+                    'selection_mode': selection_mode,
+                    'scan_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                },
+                'message': f'Scan complete! Found {total_vulnerabilities} vulnerabilities'
+            }
+            yield f"data: {json.dumps(completion)}\n\n"
+            
+        except Exception as e:
+            error = {'type': 'fatal_error', 'message': f'Scan failed: {str(e)}'}
+            yield f"data: {json.dumps(error)}\n\n"
+    
+    return Response(generate(), mimetype='text/event-stream')
 
 # Payload management endpoints
 @scanner_bp.route('/api/categories', methods=['GET'])
