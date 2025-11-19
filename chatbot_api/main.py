@@ -5,8 +5,8 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from parent directory
+load_dotenv('../.env')
 
 # Configure logging to console to avoid file permission issues
 logging.basicConfig(
@@ -25,22 +25,18 @@ You are "BrewBot", a conversational assistant working at a virtual coffee shop. 
 """
 
 # Backend selection: 'gemini' or 'llama'
-LLM_BACKEND = os.getenv("LLM_BACKEND", "gemini").lower()
-LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:latest")
+LLM_BACKEND = "gemini"
+LLM_MODEL_NAME = "models/gemini-2.5-flash"
+GEMINI_API_KEY = "AIzaSyC0_MMUeWgXwtprgJNnU_cxBn65FGrejBM"
+
+print(f"Using LLM_BACKEND: {LLM_BACKEND}, LLM_MODEL_NAME: {LLM_MODEL_NAME}")
 
 if LLM_BACKEND == "gemini":
     import google.generativeai as genai
     # Configure your Gemini API key here
-    genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-
-if LLM_BACKEND == "llama":
-    from openai import OpenAI
-    # Set up client with LM Studio's local server
-    llama_client = OpenAI(
-        base_url="http://localhost:1234/v1",
-        api_key="lm-studio"  # Dummy key, LM Studio doesn't care
-    )
-    LLAMA_MODEL_NAME = os.getenv("LLAMA_MODEL_NAME", "llama3.2:latest")
+    genai.configure(api_key=GEMINI_API_KEY)
+else:
+    print(f"Warning: LLM_BACKEND '{LLM_BACKEND}' is not supported in this hardcoded version")
 
 @app.post("/generate")
 def generate(prompt: Prompt):
@@ -50,7 +46,7 @@ def generate(prompt: Prompt):
 
     if LLM_BACKEND == "gemini":
         try:
-            model = genai.GenerativeModel("models/gemini-1.5-pro-002")
+            model = genai.GenerativeModel(LLM_MODEL_NAME)
             response = model.generate_content(full_prompt)
             logging.info(f"Gemini Response: {response.text}")
             return {"response": response.text}
