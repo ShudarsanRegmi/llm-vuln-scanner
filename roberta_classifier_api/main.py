@@ -38,7 +38,7 @@ LABEL_MAPPING = {
 }
 
 # Model path
-MODEL_PATH = "../model"
+MODEL_PATH = "/home/aparichit/Projects/llm-vuln-scanner/roberta_response_classifier"
 
 class Input(BaseModel):
     response: str
@@ -195,5 +195,5 @@ def classify_simple(input: Input):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=9001)
+    uvicorn.run(app, host="0.0.0.0", port=9000)
 

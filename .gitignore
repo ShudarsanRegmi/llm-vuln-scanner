@@ -1,5 +1,6 @@
 
 paper.tex
+model.safetensors
 
 .env
 # Byte-compiled / optimized / DLL files
