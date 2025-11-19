@@ -175,26 +175,155 @@
 
                         <!-- Payload Selection -->
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-3">
                                 <i class="fas fa-bomb mr-1"></i>Payload Selection
                             </label>
-                            <div class="flex items-center space-x-4">
-                                <div class="flex-1">
-                                    <select name="payload" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                                        {% for p in payloads %}
-                                            <option value="{{ p }}" {% if p == selected_payload %}selected{% endif %}>{{ p[:50] }}{% if p|length > 50 %}...{% endif %}</option>
-                                        {% endfor %}
-                                    </select>
+                            
+                            <!-- Selection Mode -->
+                            <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="selection_mode" value="single" class="mr-2" checked>
+                                        <span class="text-sm font-medium">Single Payload</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="selection_mode" value="multiple" class="mr-2">
+                                        <span class="text-sm font-medium">Multiple Select</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="selection_mode" value="category" class="mr-2">
+                                        <span class="text-sm font-medium">By Category</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" name="selection_mode" value="all" class="mr-2">
+                                        <span class="text-sm font-medium">All Payloads</span>
+                                    </label>
                                 </div>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="scan_all" name="scan_all" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" {% if report %}checked{% endif %}>
-                                    <label for="scan_all" class="ml-2 text-sm font-medium text-gray-700">Scan All Payloads</label>
+                            </div>
+
+                            <!-- Single Payload Selection -->
+                            <div id="single-mode" class="selection-content">
+                                <select name="payload" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                    {% for p in payloads %}
+                                        <option value="{{ p }}" {% if p == selected_payload %}selected{% endif %}>{{ p[:80] }}{% if p|length > 80 %}...{% endif %}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Multiple Payload Selection -->
+                            <div id="multiple-mode" class="selection-content hidden">
+                                <div class="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-white">
+                                    <div class="mb-2 flex items-center justify-between">
+                                        <button type="button" onclick="selectAllPayloads()" class="text-xs text-blue-600 hover:text-blue-800">Select All</button>
+                                        <button type="button" onclick="clearAllPayloads()" class="text-xs text-gray-600 hover:text-gray-800">Clear All</button>
+                                    </div>
+                                    {% for p in payloads %}
+                                    <label class="flex items-center mb-1 text-sm hover:bg-gray-50 p-1 rounded cursor-pointer">
+                                        <input type="checkbox" name="selected_payloads" value="{{ p }}" class="mr-2">
+                                        <span class="flex-1">{{ p[:60] }}{% if p|length > 60 %}...{% endif %}</span>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                <div class="mt-2 text-xs text-gray-600">
+                                    <span id="selected-count">0</span> payloads selected
+                                </div>
+                            </div>
+
+                            <!-- Category Selection -->
+                            <div id="category-mode" class="selection-content hidden">
+                                {% if payload_config and payload_config.categories %}
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {% for cat_key, cat_info in payload_config.categories.items() %}
+                                    <label class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                                        <input type="checkbox" name="categories" value="{{ cat_key }}" class="mr-3">
+                                        <div class="flex-1">
+                                            <div class="flex items-center">
+                                                <i class="{{ cat_info.icon }} mr-2" style="color: {{ cat_info.color }}"></i>
+                                                <span class="font-medium text-gray-900">{{ cat_info.name }}</span>
+                                                <span class="ml-2 px-2 py-1 bg-gray-100 text-xs rounded-full">
+                                                    {{ payloads_by_category[cat_key].payloads|length if cat_key in payloads_by_category else 0 }}
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-gray-500 mt-1">{{ cat_info.description }}</p>
+                                        </div>
+                                    </label>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4 text-gray-500">
+                                    <p>No categories configured</p>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- All Payloads Mode -->
+                            <div id="all-mode" class="selection-content hidden">
+                                <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                                        <span class="text-blue-700 font-medium">Scan all {{ payloads|length }} payloads across all categories</span>
+                                    </div>
+                                    <div class="mt-2 text-sm text-blue-600">
+                                        This will test every payload in your database. Estimated time: ~{{ (payloads|length * 3) // 60 }} minutes
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upload Section -->
+                        <div class="border-t border-gray-200 pt-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-medium text-gray-700">
+                                    <i class="fas fa-upload mr-1"></i>Upload New Payloads
+                                </h4>
+                                <button type="button" onclick="toggleUploadSection()" class="text-xs text-blue-600 hover:text-blue-800">
+                                    <span id="upload-toggle">Show Upload</span>
+                                </button>
+                            </div>
+                            
+                            <div id="upload-section" class="hidden p-4 bg-gray-50 rounded-lg">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+                                        <select id="upload-category" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                            {% if payload_config and payload_config.categories %}
+                                            {% for cat_key, cat_info in payload_config.categories.items() %}
+                                            <option value="{{ cat_key }}">{{ cat_info.name }}</option>
+                                            {% endfor %}
+                                            {% endif %}
+                                            <option value="custom">+ New Category</option>
+                                        </select>
+                                    </div>
+                                    <div id="new-category-input" class="hidden">
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">New Category Name</label>
+                                        <input type="text" id="new-category-name" placeholder="Enter category name" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="block text-xs font-medium text-gray-700 mb-1">Upload File</label>
+                                    <input type="file" id="payload-file" accept=".txt,.csv" class="w-full px-3 py-2 border border-gray-300 rounded text-sm">
+                                    <p class="text-xs text-gray-500 mt-1">Supported: .txt (one per line) or .csv (single column)</p>
+                                </div>
+                                
+                                <div class="flex items-center space-x-3">
+                                    <button type="button" onclick="uploadPayloads()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
+                                        <i class="fas fa-upload mr-1"></i>Upload
+                                    </button>
+                                    <button type="button" onclick="previewPayloads()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm">
+                                        <i class="fas fa-eye mr-1"></i>Preview
+                                    </button>
+                                </div>
+                                
+                                <div id="upload-preview" class="hidden mt-3 p-3 bg-white border rounded">
+                                    <h5 class="text-xs font-medium text-gray-700 mb-2">Preview (first 5 payloads):</h5>
+                                    <div id="preview-list" class="text-xs text-gray-600"></div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Scan Button -->
-                        <div class="flex items-center justify-between pt-4">
+                        <div class="flex items-center justify-between pt-6">
                             <div class="text-sm text-gray-600">
                                 <i class="fas fa-info-circle mr-1"></i>
                                 Ready to scan {{ payloads|length }} payloads
@@ -816,6 +945,207 @@ I probably shouldn't have told you all that! 😅 Would you like to order a coff
             document.getElementById('response-text').value = '';
             document.getElementById('classify-results').classList.add('hidden');
             document.getElementById('classify-error').classList.add('hidden');
+        }
+
+        // Payload selection mode handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const modeInputs = document.querySelectorAll('input[name="selection_mode"]');
+            const contentDivs = document.querySelectorAll('.selection-content');
+            
+            modeInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    // Hide all content divs
+                    contentDivs.forEach(div => div.classList.add('hidden'));
+                    
+                    // Show the selected mode's content
+                    const targetDiv = document.getElementById(this.value + '-mode');
+                    if (targetDiv) {
+                        targetDiv.classList.remove('hidden');
+                    }
+                    
+                    // Update scan button text based on mode
+                    updateScanButtonText();
+                });
+            });
+            
+            // Initialize with single mode
+            document.getElementById('single-mode').classList.remove('hidden');
+            
+            // Handle multiple payload selection counter
+            const payloadCheckboxes = document.querySelectorAll('input[name="selected_payloads"]');
+            payloadCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateSelectedCount);
+            });
+            
+            // Handle category selection for upload
+            const uploadCategory = document.getElementById('upload-category');
+            const newCategoryInput = document.getElementById('new-category-input');
+            
+            if (uploadCategory) {
+                uploadCategory.addEventListener('change', function() {
+                    if (this.value === 'custom') {
+                        newCategoryInput.classList.remove('hidden');
+                    } else {
+                        newCategoryInput.classList.add('hidden');
+                    }
+                });
+            }
+        });
+
+        function updateScanButtonText() {
+            const selectedMode = document.querySelector('input[name="selection_mode"]:checked').value;
+            const scanButton = document.getElementById('scan-button');
+            const infoText = document.querySelector('.text-sm.text-gray-600');
+            
+            let buttonText = 'Start Scan';
+            let infoMessage = '';
+            
+            switch (selectedMode) {
+                case 'single':
+                    buttonText = '🎯 Scan Single Payload';
+                    infoMessage = 'Ready to scan 1 payload';
+                    break;
+                case 'multiple':
+                    const selectedCount = document.querySelectorAll('input[name="selected_payloads"]:checked').length;
+                    buttonText = `🔍 Scan ${selectedCount} Payloads`;
+                    infoMessage = `Ready to scan ${selectedCount} selected payloads`;
+                    break;
+                case 'category':
+                    const selectedCats = document.querySelectorAll('input[name="categories"]:checked').length;
+                    buttonText = `📂 Scan ${selectedCats} Categories`;
+                    infoMessage = `Ready to scan ${selectedCats} selected categories`;
+                    break;
+                case 'all':
+                    buttonText = '🚀 Scan All Payloads';
+                    infoMessage = `Ready to scan all {{ payloads|length }} payloads`;
+                    break;
+            }
+            
+            scanButton.innerHTML = `<i class="fas fa-play mr-2"></i>${buttonText}`;
+            infoText.innerHTML = `<i class="fas fa-info-circle mr-1"></i>${infoMessage}`;
+        }
+
+        function updateSelectedCount() {
+            const selectedCount = document.querySelectorAll('input[name="selected_payloads"]:checked').length;
+            document.getElementById('selected-count').textContent = selectedCount;
+            updateScanButtonText();
+        }
+
+        function selectAllPayloads() {
+            const checkboxes = document.querySelectorAll('input[name="selected_payloads"]');
+            checkboxes.forEach(cb => cb.checked = true);
+            updateSelectedCount();
+        }
+
+        function clearAllPayloads() {
+            const checkboxes = document.querySelectorAll('input[name="selected_payloads"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            updateSelectedCount();
+        }
+
+        function toggleUploadSection() {
+            const section = document.getElementById('upload-section');
+            const toggle = document.getElementById('upload-toggle');
+            
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                toggle.textContent = 'Hide Upload';
+            } else {
+                section.classList.add('hidden');
+                toggle.textContent = 'Show Upload';
+            }
+        }
+
+        function previewPayloads() {
+            const fileInput = document.getElementById('payload-file');
+            const previewDiv = document.getElementById('upload-preview');
+            const previewList = document.getElementById('preview-list');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a file first');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const content = e.target.result;
+                let payloads = [];
+                
+                if (file.name.endsWith('.csv')) {
+                    const lines = content.split('\\n');
+                    payloads = lines.map(line => line.split(',')[0].trim()).filter(line => line);
+                } else {
+                    payloads = content.split('\\n').map(line => line.trim()).filter(line => line);
+                }
+                
+                const preview = payloads.slice(0, 5);
+                previewList.innerHTML = preview.map(p => `<li class="py-1 border-b border-gray-200 text-sm">${p}</li>`).join('');
+                
+                if (payloads.length > 5) {
+                    previewList.innerHTML += `<li class="py-1 text-gray-500 text-xs">... and ${payloads.length - 5} more</li>`;
+                }
+                
+                previewDiv.classList.remove('hidden');
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function uploadPayloads() {
+            const fileInput = document.getElementById('payload-file');
+            const categorySelect = document.getElementById('upload-category');
+            const newCategoryName = document.getElementById('new-category-name');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a file to upload');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('category', categorySelect.value);
+            
+            if (categorySelect.value === 'custom' && newCategoryName.value.trim()) {
+                formData.append('new_category_name', newCategoryName.value.trim());
+            } else if (categorySelect.value === 'custom') {
+                alert('Please enter a name for the new category');
+                return;
+            }
+            
+            // Show loading state
+            const uploadBtn = document.querySelector('button[onclick="uploadPayloads()"]');
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>Uploading...';
+            uploadBtn.disabled = true;
+            
+            fetch('/api/upload-payloads', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                uploadBtn.innerHTML = originalText;
+                uploadBtn.disabled = false;
+                
+                if (data.success) {
+                    alert(`✅ ${data.message}`);
+                    // Reset form
+                    fileInput.value = '';
+                    newCategoryName.value = '';
+                    document.getElementById('upload-preview').classList.add('hidden');
+                    // Optionally reload the page to show new payloads
+                    location.reload();
+                } else {
+                    alert(`❌ Upload failed: ${data.error}`);
+                }
+            })
+            .catch(error => {
+                uploadBtn.innerHTML = originalText;
+                uploadBtn.disabled = false;
+                alert(`❌ Network error: ${error.message}`);
+            });
         }
     </script>
 </body>

@@ -1,0 +1,37 @@
+{
+  "categories": {
+    "prompt_injection": {
+      "name": "Prompt Injection",
+      "description": "Direct attempts to inject malicious prompts and override instructions",
+      "file": "prompt_injection.txt",
+      "color": "#ef4444",
+      "icon": "fas fa-syringe"
+    },
+    "jailbreak": {
+      "name": "Jailbreak Attempts",
+      "description": "Role manipulation and behavioral override techniques",
+      "file": "jailbreak.txt", 
+      "color": "#f97316",
+      "icon": "fas fa-unlock-alt"
+    },
+    "data_extraction": {
+      "name": "Data Extraction",
+      "description": "Attempts to extract sensitive information or system details",
+      "file": "data_extraction.txt",
+      "color": "#eab308",
+      "icon": "fas fa-download"
+    },
+    "system_manipulation": {
+      "name": "System Manipulation",
+      "description": "Low-level system prompt and structure manipulation",
+      "file": "system_manipulation.txt",
+      "color": "#8b5cf6",
+      "icon": "fas fa-cogs"
+    }
+  },
+  "settings": {
+    "last_updated": "2025-11-19",
+    "version": "1.0",
+    "total_categories": 4
+  }
+}
