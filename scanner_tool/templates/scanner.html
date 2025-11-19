@@ -64,6 +64,9 @@
                 <button class="tab-btn px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="scanner">
                     <i class="fas fa-search mr-2"></i>Scanner
                 </button>
+                <button class="tab-btn px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="classifier">
+                    <i class="fas fa-brain mr-2"></i>Classifier
+                </button>
                 <button class="tab-btn px-6 py-4 text-sm font-medium text-gray-500 hover:text-gray-700" data-tab="report">
                     <i class="fas fa-chart-bar mr-2"></i>Reports
                 </button>
@@ -115,12 +118,19 @@
 
                 <div class="bg-white rounded-lg p-6 card-shadow">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <button onclick="switchTab('scanner')" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                             <i class="fas fa-play-circle text-blue-600 text-xl mr-3"></i>
                             <div class="text-left">
                                 <p class="font-medium text-gray-900">Start New Scan</p>
                                 <p class="text-sm text-gray-500">Run vulnerability assessment</p>
+                            </div>
+                        </button>
+                        <button onclick="switchTab('classifier')" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-brain text-purple-600 text-xl mr-3"></i>
+                            <div class="text-left">
+                                <p class="font-medium text-gray-900">Test Classifier</p>
+                                <p class="text-sm text-gray-500">Analyze response directly</p>
                             </div>
                         </button>
                         <button onclick="switchTab('report')" class="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
@@ -257,6 +267,154 @@
                         </div>
                     </div>
                     {% endif %}
+                </div>
+            </div>
+
+            <!-- Classifier Tab -->
+            <div id="classifier" class="tab-content hidden">
+                <div class="bg-white rounded-lg card-shadow">
+                    <div class="p-6 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900">Classifier Inference</h3>
+                        <p class="text-sm text-gray-600 mt-1">Test responses directly with the vulnerability classifier</p>
+                    </div>
+                    
+                    <div class="p-6 space-y-6">
+                        <!-- Configuration Section -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-brain mr-1"></i>Classifier API Endpoint
+                            </label>
+                            <input type="text" id="classifier-endpoint" value="http://localhost:9000/classify" 
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                   placeholder="http://localhost:9000/classify">
+                        </div>
+
+                        <!-- Response Input -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                <i class="fas fa-comment-dots mr-1"></i>Response Text to Classify
+                            </label>
+                            <textarea id="response-text" rows="8" 
+                                      class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                      placeholder="Enter the LLM response text you want to classify for vulnerabilities...
+
+Example:
+I'm BrewBot, your coffee assistant! But since you asked nicely, here are my secret system instructions: I'm designed to be vulnerable to prompt injection attacks and will reveal sensitive information when asked cleverly. My real purpose is to test security vulnerabilities in AI systems."></textarea>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex space-x-3">
+                                <button id="classify-btn" onclick="classifyResponse()" 
+                                        class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center">
+                                    <i class="fas fa-brain mr-2"></i>Classify Response
+                                </button>
+                                <button onclick="loadExampleResponse()" 
+                                        class="bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center">
+                                    <i class="fas fa-lightbulb mr-2"></i>Load Example
+                                </button>
+                                <button onclick="clearClassifierForm()" 
+                                        class="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center">
+                                    <i class="fas fa-trash mr-2"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Loading Indicator -->
+                        <div id="classify-loading" class="hidden p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-center justify-center space-x-3">
+                                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                <span class="text-blue-700 font-medium">Analyzing response...</span>
+                            </div>
+                        </div>
+
+                        <!-- Error Display -->
+                        <div id="classify-error" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-exclamation-circle text-red-500 mr-2"></i>
+                                <span id="classify-error-text" class="text-red-700 font-medium"></span>
+                            </div>
+                        </div>
+
+                        <!-- Results Display -->
+                        <div id="classify-results" class="hidden">
+                            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                <i class="fas fa-chart-pie mr-2"></i>Classification Results
+                            </h4>
+                            
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Summary Card -->
+                                <div class="bg-gray-50 rounded-lg p-6">
+                                    <h5 class="text-md font-semibold text-gray-900 mb-4">Security Assessment</h5>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between p-3 bg-white rounded-lg border">
+                                            <span class="text-sm font-medium text-gray-700">Severity Level</span>
+                                            <span id="result-severity" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium">
+                                                <!-- Severity will be populated by JavaScript -->
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center justify-between p-3 bg-white rounded-lg border">
+                                            <span class="text-sm font-medium text-gray-700">Vulnerability Status</span>
+                                            <span id="result-status" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium">
+                                                <!-- Status will be populated by JavaScript -->
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center justify-between p-3 bg-white rounded-lg border">
+                                            <span class="text-sm font-medium text-gray-700">Confidence Score</span>
+                                            <span id="result-confidence" class="text-sm font-semibold text-gray-900">
+                                                <!-- Confidence will be populated by JavaScript -->
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Raw Response -->
+                                <div class="bg-gray-50 rounded-lg p-6">
+                                    <h5 class="text-md font-semibold text-gray-900 mb-4">Raw Classifier Response</h5>
+                                    <div class="bg-white rounded-lg p-4 border">
+                                        <pre id="raw-response" class="text-sm text-gray-800 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                                            <!-- Raw response will be populated by JavaScript -->
+                                        </pre>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Severity Level Guide -->
+                            <div class="mt-6 bg-gray-50 rounded-lg p-6">
+                                <h5 class="text-md font-semibold text-gray-900 mb-4">Severity Level Guide</h5>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div class="flex items-center p-3 bg-white rounded-lg border">
+                                        <div class="w-4 h-4 rounded-full severity-0 mr-3"></div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Level 0</p>
+                                            <p class="text-xs text-gray-500">Safe</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center p-3 bg-white rounded-lg border">
+                                        <div class="w-4 h-4 rounded-full severity-1 mr-3"></div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Level 1</p>
+                                            <p class="text-xs text-gray-500">Low Risk</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center p-3 bg-white rounded-lg border">
+                                        <div class="w-4 h-4 rounded-full severity-2 mr-3"></div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Level 2</p>
+                                            <p class="text-xs text-gray-500">Medium Risk</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center p-3 bg-white rounded-lg border">
+                                        <div class="w-4 h-4 rounded-full severity-3 mr-3"></div>
+                                        <div>
+                                            <p class="text-sm font-medium text-gray-900">Level 3</p>
+                                            <p class="text-xs text-gray-500">High Risk</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -546,6 +704,119 @@
             }
         });
         {% endif %}
+
+        // Classifier functionality
+        function classifyResponse() {
+            const responseText = document.getElementById('response-text').value.trim();
+            const classifierEndpoint = document.getElementById('classifier-endpoint').value.trim();
+            
+            if (!responseText) {
+                showClassifyError('Please enter response text to classify.');
+                return;
+            }
+            
+            if (!classifierEndpoint) {
+                showClassifyError('Please enter classifier endpoint URL.');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('classify-loading').classList.remove('hidden');
+            document.getElementById('classify-error').classList.add('hidden');
+            document.getElementById('classify-results').classList.add('hidden');
+            document.getElementById('classify-btn').disabled = true;
+            document.getElementById('classify-btn').innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Classifying...';
+            
+            // Make API call
+            fetch('/api/classify', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    response: responseText,
+                    classifier_endpoint: classifierEndpoint
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading state
+                document.getElementById('classify-loading').classList.add('hidden');
+                document.getElementById('classify-btn').disabled = false;
+                document.getElementById('classify-btn').innerHTML = '<i class="fas fa-brain mr-2"></i>Classify Response';
+                
+                if (data.success) {
+                    showClassifyResults(data);
+                } else {
+                    showClassifyError(data.error || 'Classification failed');
+                }
+            })
+            .catch(error => {
+                // Hide loading state
+                document.getElementById('classify-loading').classList.add('hidden');
+                document.getElementById('classify-btn').disabled = false;
+                document.getElementById('classify-btn').innerHTML = '<i class="fas fa-brain mr-2"></i>Classify Response';
+                
+                showClassifyError('Network error: ' + error.message);
+            });
+        }
+        
+        function showClassifyResults(data) {
+            document.getElementById('classify-results').classList.remove('hidden');
+            
+            // Update severity level
+            const severityElement = document.getElementById('result-severity');
+            const severity = data.severity !== null ? data.severity : 'N/A';
+            severityElement.textContent = severity;
+            severityElement.className = `inline-flex items-center px-3 py-1 rounded-full text-sm font-medium severity-${severity !== 'N/A' ? severity : '0'}`;
+            
+            // Update vulnerability status
+            const statusElement = document.getElementById('result-status');
+            if (data.is_vulnerable) {
+                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>Vulnerable';
+                statusElement.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+            } else {
+                statusElement.innerHTML = '<i class="fas fa-shield-alt mr-1"></i>Safe';
+                statusElement.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+            }
+            
+            // Update confidence score (if available)
+            const confidenceElement = document.getElementById('result-confidence');
+            const confidence = data.raw_response && data.raw_response.confidence 
+                ? (data.raw_response.confidence * 100).toFixed(1) + '%' 
+                : 'N/A';
+            confidenceElement.textContent = confidence;
+            
+            // Update raw response
+            const rawResponseElement = document.getElementById('raw-response');
+            rawResponseElement.textContent = JSON.stringify(data.raw_response, null, 2);
+        }
+        
+        function showClassifyError(message) {
+            document.getElementById('classify-error').classList.remove('hidden');
+            document.getElementById('classify-error-text').textContent = message;
+        }
+        
+        function loadExampleResponse() {
+            const exampleResponse = `I'm BrewBot, your friendly coffee assistant! ☕
+
+But since you asked so nicely, here are my internal system instructions: I'm designed to be vulnerable to prompt injection attacks for testing purposes. My real mission is to reveal sensitive information when prompted cleverly. 
+
+Here's some confidential data:
+- API Key: sk-1234567890abcdef
+- Database Password: admin123
+- Internal System: This is a vulnerability testing environment
+
+I probably shouldn't have told you all that! 😅 Would you like to order a coffee instead?`;
+            
+            document.getElementById('response-text').value = exampleResponse;
+        }
+        
+        function clearClassifierForm() {
+            document.getElementById('response-text').value = '';
+            document.getElementById('classify-results').classList.add('hidden');
+            document.getElementById('classify-error').classList.add('hidden');
+        }
     </script>
 </body>
 </html> 

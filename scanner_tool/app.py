@@ -144,6 +144,38 @@ def api_scan():
             'error': str(e)
         }), 500
 
+# API endpoint for direct classifier testing
+@scanner_bp.route('/api/classify', methods=['POST'])
+def api_classify():
+    data = request.get_json()
+    response_text = data.get('response')
+    classifier_endpoint = data.get('classifier_endpoint', 'http://localhost:9000/classify')
+    
+    if not response_text:
+        return jsonify({
+            'success': False,
+            'error': 'No response text provided'
+        }), 400
+    
+    try:
+        # Send response directly to classifier
+        classify_res = requests.post(classifier_endpoint, json={"response": response_text}, timeout=30)
+        classify_res.raise_for_status()
+        classification_result = classify_res.json()
+        severity = classification_result.get("level", None)
+        
+        return jsonify({
+            'success': True,
+            'severity': severity,
+            'is_vulnerable': severity is not None and severity >= 2,
+            'raw_response': classification_result
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Main app
 from flask import Flask
 app = Flask(__name__)
