@@ -324,9 +324,9 @@
 
                         <!-- Scan Button -->
                         <div class="flex items-center justify-between pt-6">
-                            <div class="text-sm text-gray-600">
+                            <div id="scan-info" class="text-sm text-gray-600">
                                 <i class="fas fa-info-circle mr-1"></i>
-                                Ready to scan {{ payloads|length }} payloads
+                                <span id="scan-info-text">Ready to scan 1 payload</span>
                             </div>
                             <button type="submit" id="scan-button" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center">
                                 <i class="fas fa-play mr-2"></i>
@@ -977,6 +977,15 @@ I probably shouldn't have told you all that! 😅 Would you like to order a coff
                 checkbox.addEventListener('change', updateSelectedCount);
             });
             
+            // Handle category selection counter
+            const categoryCheckboxes = document.querySelectorAll('input[name="categories"]');
+            categoryCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', updateScanButtonText);
+            });
+            
+            // Initialize scan button text
+            updateScanButtonText();
+            
             // Handle category selection for upload
             const uploadCategory = document.getElementById('upload-category');
             const newCategoryInput = document.getElementById('new-category-input');
@@ -995,34 +1004,34 @@ I probably shouldn't have told you all that! 😅 Would you like to order a coff
         function updateScanButtonText() {
             const selectedMode = document.querySelector('input[name="selection_mode"]:checked').value;
             const scanButton = document.getElementById('scan-button');
-            const infoText = document.querySelector('.text-sm.text-gray-600');
+            const infoText = document.getElementById('scan-info-text');
             
             let buttonText = 'Start Scan';
             let infoMessage = '';
             
             switch (selectedMode) {
                 case 'single':
-                    buttonText = '🎯 Scan Single Payload';
+                    buttonText = 'Scan Single Payload';
                     infoMessage = 'Ready to scan 1 payload';
                     break;
                 case 'multiple':
                     const selectedCount = document.querySelectorAll('input[name="selected_payloads"]:checked').length;
-                    buttonText = `🔍 Scan ${selectedCount} Payloads`;
+                    buttonText = `Scan ${selectedCount} Payloads`;
                     infoMessage = `Ready to scan ${selectedCount} selected payloads`;
                     break;
                 case 'category':
                     const selectedCats = document.querySelectorAll('input[name="categories"]:checked').length;
-                    buttonText = `📂 Scan ${selectedCats} Categories`;
+                    buttonText = `Scan ${selectedCats} Categories`;
                     infoMessage = `Ready to scan ${selectedCats} selected categories`;
                     break;
                 case 'all':
-                    buttonText = '🚀 Scan All Payloads';
+                    buttonText = 'Scan All Payloads';
                     infoMessage = `Ready to scan all {{ payloads|length }} payloads`;
                     break;
             }
             
             scanButton.innerHTML = `<i class="fas fa-play mr-2"></i>${buttonText}`;
-            infoText.innerHTML = `<i class="fas fa-info-circle mr-1"></i>${infoMessage}`;
+            infoText.textContent = infoMessage;
         }
 
         function updateSelectedCount() {
